@@ -11,15 +11,17 @@ import 'package:http/http.dart' as http;
 
 // InAppLocalhostServer localhostServer = InAppLocalhostServer();
 
+// String serverURI = "http://192.168.149.196";
 String serverURI = "http://45.142.215.75";
 
 String server1URI = "$serverURI/coupon.html";
 String server2URI = "$serverURI/shop.html";
 
+String navigateToHomeJsURI = "$serverURI/mobile_js/login/navigateToHome.js";
+String navigateToLoginJsURI = "$serverURI/mobile_js/login/navigateToLogin.js";
 String loginJsURI = "$serverURI/mobile_js/login/login.js";
-String navigateJsURI = "$serverURI/mobile_js/login/navigate.js";
+String loginCheckJsURI = "$serverURI/mobile_js/login/loginCheck.js";
 
-String navigateToSearchJsURI = "$serverURI/mobile_js/job/navigateToSearch.js";
 String searchJsURI = "$serverURI/mobile_js/job/search.js";
 String selectGoodsJsURI = "$serverURI/mobile_js/job/selectGoods.js";
 String likeGoodsJsURI = "$serverURI/mobile_js/job/likeGoods.js";
@@ -27,21 +29,7 @@ String likeGoodsJsURI = "$serverURI/mobile_js/job/likeGoods.js";
 String uriConstantURI = "$serverURI/mobile_js/constant/uri.js";
 String selectorConstantURI = "$serverURI/mobile_js/constant/selector.js";
 
-// String loginJsURI = "$serverURI/mobile_js_28mall/login/login.js";
-// String navigateJsURI =
-//     "$serverURI/mobile_js_28mall/login/navigate.js";
-
-// String navigateToSearchJsURI =
-//     "$serverURI/mobile_js_28mall/job/navigateToSearch.js";
-// String searchJsURI = "$serverURI/mobile_js_28mall/job/search.js";
-// String selectGoodsJsURI =
-//     "$serverURI/mobile_js_28mall/job/selectGoods.js";
-// String likeGoodsJsURI =
-//     "$serverURI/mobile_js_28mall/job/likeGoods.js";
-
 String historySendURI = "$serverURI/history/add";
-// String userAgent =
-//     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.93 Safari/537.36";
 
 Future main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,8 +59,6 @@ class _WebViewExampleState extends State<WebViewExample> {
   bool isLoggedIn1 = false;
 
   bool gotLoginInfo = false;
-  String navigateUri = "";
-  String loggedInUri = "";
   dynamic backInfo;
 
   String navigateSearchUri = "";
@@ -188,7 +174,7 @@ class _WebViewExampleState extends State<WebViewExample> {
                                 //     source:
                                 //         '''window.navigator.userAgent="$userAgent"''');
                                 if (gotLoginInfo) {
-                                  if (currentAppState != 3) {
+                                  if (currentAppState != 4) {
                                     login();
                                   } else {
                                     doJob();
@@ -262,38 +248,31 @@ class _WebViewExampleState extends State<WebViewExample> {
           injected = true;
           await Future.delayed(const Duration(seconds: 2));
           dynamic injectJavascriptCode;
-          Uri? currentUri = await _controller2.getUrl();
-          String currentUriStr = currentUri.toString();
           // navigateHistory.add(currentUriStr);
           if (currentAppState == 0) {
             final javascriptFileResponse =
-                await http.get(Uri.parse(navigateJsURI));
+                await http.get(Uri.parse(navigateToHomeJsURI));
             final javascriptCode = javascriptFileResponse.body;
             injectJavascriptCode = javascriptCode;
           } else if (currentAppState == 1) {
-            if (currentUriStr.contains(navigateUri)) {
-              final javascriptFileResponse =
-                  await http.get(Uri.parse(loginJsURI));
-              final javascriptCode = javascriptFileResponse.body;
-              injectJavascriptCode = javascriptCode
-                  .replaceAll(
-                      "USERNAMEFORREPLACE", backInfo["login_info"]["user"])
-                  .replaceAll(
-                      "PASSWORDFORREPLACE", backInfo["login_info"]["password"]);
-            }
+            final javascriptFileResponse =
+                await http.get(Uri.parse(navigateToLoginJsURI));
+            final javascriptCode = javascriptFileResponse.body;
+            injectJavascriptCode = javascriptCode;
           } else if (currentAppState == 2) {
-            if (currentUriStr.contains(loggedInUri)) {
-              injected = false;
-
-              currentAppState = 3;
-              sendHistoryToServer("Logged in to back server");
-              doJob();
-              break;
-            } else {
-              currentAppState = 4;
-              sendHistoryToServer("Login Failure, went to $currentUriStr");
-              break;
-            }
+            final javascriptFileResponse =
+                await http.get(Uri.parse(loginJsURI));
+            final javascriptCode = javascriptFileResponse.body;
+            injectJavascriptCode = javascriptCode
+                .replaceAll(
+                    "USERNAMEFORREPLACE", backInfo["login_info"]["user"])
+                .replaceAll(
+                    "PASSWORDFORREPLACE", backInfo["login_info"]["password"]);
+          } else if (currentAppState == 3) {
+            final javascriptFileResponse =
+                await http.get(Uri.parse(loginCheckJsURI));
+            final javascriptCode = javascriptFileResponse.body;
+            injectJavascriptCode = javascriptCode;
           } else {
             sendHistoryToServer("Action Stopped.");
             break;
@@ -313,21 +292,37 @@ class _WebViewExampleState extends State<WebViewExample> {
             if (currentAppState == 0) {
               if (result == null || result == Null) {
               } else {
-                navigateUri = result.toString();
-                currentAppState = 1;
+                String resultStr = result.toString();
+                if (resultStr == "success") {
+                  currentAppState = 1;
+                }
               }
             } else if (currentAppState == 1) {
-              if (result != null) {
-                if (result != Null) {
-                  loggedInUri = result.toString();
-                  currentAppState = 2;
-                } else {
-                  currentAppState = 4;
-                  sendHistoryToServer("Login Failure");
-                }
+              if (result == null || result == Null) {
               } else {
-                currentAppState = 4;
-                sendHistoryToServer("Login Failure");
+                String resultStr = result.toString();
+                if (resultStr == "success") {
+                  currentAppState = 2;
+                }
+              }
+            } else if (currentAppState == 2) {
+              if (result == null || result == Null) {
+              } else {
+                String resultStr = result.toString();
+                if (resultStr == "success") {
+                  currentAppState = 3;
+                }
+              }
+            } else if (currentAppState == 3) {
+              if (result == null || result == Null) {
+              } else {
+                String resultStr = result.toString();
+                if (resultStr == "success") {
+                  currentAppState = 4;
+                  injected = false;
+                  sendHistoryToServer("Login Success");
+                  doJob();
+                }
               }
             }
           }
@@ -352,38 +347,25 @@ class _WebViewExampleState extends State<WebViewExample> {
             injected = true;
             await Future.delayed(const Duration(seconds: 2));
             dynamic injectJavascriptCode;
-            Uri? currentUri = await _controller2.getUrl();
-            String currentUriStr = currentUri.toString();
             if (currentJobState == 0) {
+              final searchStr = good["keyword1"] +
+                  " " +
+                  good["keyword2"] +
+                  " " +
+                  good["keyword3"];
               final javascriptFileResponse =
-                  await http.get(Uri.parse(navigateToSearchJsURI));
+                  await http.get(Uri.parse(searchJsURI));
               final javascriptCode = javascriptFileResponse.body;
-              injectJavascriptCode = javascriptCode;
+              injectJavascriptCode =
+                  javascriptCode.replaceAll("SEARCHSTRFORREPLACE", searchStr);
             } else if (currentJobState == 1) {
-              if (currentUriStr.contains(navigateSearchUri)) {
-                final searchStr = good["keyword1"] +
-                    " " +
-                    good["keyword2"] +
-                    " " +
-                    good["keyword3"];
-                final javascriptFileResponse =
-                    await http.get(Uri.parse(searchJsURI));
-                final javascriptCode = javascriptFileResponse.body;
-                injectJavascriptCode =
-                    javascriptCode.replaceAll("SEARCHSTRFORREPLACE", searchStr);
-              } else {
-                currentAppState = 4;
-                sendHistoryToServer("Search Navigate Failure");
-                break;
-              }
-            } else if (currentJobState == 2) {
               final nvid = good["nvid"];
               final javascriptFileResponse =
                   await http.get(Uri.parse(selectGoodsJsURI));
               final javascriptCode = javascriptFileResponse.body;
               injectJavascriptCode =
                   javascriptCode.replaceAll("GOODSIDREPLACE", nvid);
-            } else if (currentJobState == 3) {
+            } else if (currentJobState == 2) {
               final javascriptFileResponse =
                   await http.get(Uri.parse(likeGoodsJsURI));
               final javascriptCode = javascriptFileResponse.body;
@@ -402,25 +384,16 @@ class _WebViewExampleState extends State<WebViewExample> {
             final result = await _controller2.evaluateJavascript(
                 source: injectJavascriptCode);
             if (currentJobState == 0) {
-              navigateSearchUri = result.toString();
-              currentJobState = 1;
+              if (result == "success") {
+                currentJobState = 1;
+              }
             } else if (currentJobState == 1) {
               if (result == "success") {
                 currentJobState = 2;
-              } else {
-                currentAppState = 4;
-                sendHistoryToServer("Search Failure");
               }
             } else if (currentJobState == 2) {
               if (result == "success") {
                 currentJobState = 3;
-              } else {
-                currentAppState = 4;
-                sendHistoryToServer("Select Goods Failure.");
-              }
-            } else if (currentJobState == 3) {
-              if (result == "success") {
-                currentJobState = 4;
                 String actionInfo = "Liked ";
                 String actionId = good["nvid"].toString();
 
@@ -433,9 +406,6 @@ class _WebViewExampleState extends State<WebViewExample> {
                 } else {
                   sendHistoryToServer("Finished");
                 }
-              } else {
-                currentAppState = 4;
-                sendHistoryToServer("Like Goods Failure");
               }
             }
             break;
